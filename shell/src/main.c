@@ -8,17 +8,46 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <string.h>
 
 static char *lsh_read_line(void);
 static void lsh_loop(void);
-static char **lsh_split_line( char *line );
-static int lsh_execute( char **args );
+static char **lsh_split_line( char *line, int *numTokens );
+static int lsh_execute( int argc, char **argv );
 
 int main( void )
 {
+  FILE *pFile;
+  uint8_t data[512];
+  int bytesRead = 0;
+  int i,j;
+  uint16_t address=0;
+
+  pFile = fopen("block_2.bin", "rb");
+  if (pFile)
+  {
+	  bytesRead = fread(data, 1, 512, pFile);
+
+	  for (i=0,address=0; i < 512/16; i++)
+	  {
+		printf("%04X: ", address);
+		address += 16;
+
+	    for (j=0; j < 16; j++)
+	    {
+		  printf("%02X ", data[(i*16)+j]);
+	    }
+	    printf("\n");
+	  }
+  }
+
+  printf("\n");
+  fflush(stdout);
+
+
 	lsh_loop();
 
 	return 0;
@@ -27,90 +56,34 @@ int main( void )
 void lsh_loop(void)
 {
   char *line;
-  char **args;
+  char **argv;
+  int argc;
   int status = 1;
 
   while (status)
   {
     printf("$ ");
     line = lsh_read_line();
-    args = lsh_split_line(line);
-    status = lsh_execute(args);
+    argv = lsh_split_line(line, &argc);
+    status = lsh_execute(argc, argv);
 
     free(line);
-    free(args);
+    free(argv);
   }
 }
-
-/*
-#define LSH_RL_BUFSIZE 1024
-char *lsh_read_line(void)
-{
-	int bufsize = LSH_RL_BUFSIZE;
-	int position = 0;
-	char *buffer = malloc(sizeof(char) * bufsize);
-	int c;
-
-	if (!buffer)
-	{
-		fprintf(stderr, "lsh: allocation error\n");
-		exit(EXIT_FAILURE);
-	}
-
-	while (1)
-	{
-		// Read a character
-		c = getchar();
-
-		// If we hit EOF, replace it with a null character
-		if (c == EOF || c == '\n') {
-			buffer[position] = '\0';
-			return buffer;
-		} else {
-			buffer[position] = c;
-		}
-		position++;
-
-		// If we have exceeded the buffer, reallocate
-		if (position >= bufsize) {
-			bufsize += LSH_RL_BUFSIZE;
-			buffer = realloc(buffer, bufsize);
-			if (!buffer) {
-				fprintf(stderr, "lsh: allocation error\n");
-				exit(EXIT_FAILURE);
-			}
-		}
-	}
-}*/
 
 char *lsh_read_line( void )
 {
 	char *line = NULL;
-	ssize_t bufsize = 0; // have getline allocate buffer
+	size_t bufsize = 0; // have getline allocate buffer
 
-	(void)getline(&line, &bufsize, stdin);
+	getline(&line, &bufsize, stdin);
 	return line;
 }
 
-/*
-int getch( void )
-{
-	int ch;
-	struct termios oldt;
-	struct termios newt;
-
-	tcgetattr(STDIN_FILENO, &oldt); // store old settings
-	newt = oldt;  // copy old settings to new settings
-	newt.c_lflag &= ~(ICANON | ECHO);  // make one change to old settings in new settings
-	tcsetattr(STDIN_FILENO, TCSANOW, &newt); // apply the new settings immediately
-	ch = getchar(); // standard getchar call
-	tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // reapply the old settings
-	return ch;
-}*/
-
 #define LSH_TOK_BUFSIZE 64
 #define LSH_TOK_DELIM " \t\r\n\a"
-char **lsh_split_line( char *line )
+char **lsh_split_line( char *line, int *numTokens )
 {
 	int bufsize = LSH_TOK_BUFSIZE, position = 0;
 	char **tokens = malloc(bufsize * sizeof(char*));
@@ -118,6 +91,11 @@ char **lsh_split_line( char *line )
 
 	if (!tokens) {
 		fprintf(stderr, "lsh: allocation error\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (!numTokens) {
+		fprintf(stderr, "lsh:argument error\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -138,12 +116,13 @@ char **lsh_split_line( char *line )
 		token = strtok(NULL, LSH_TOK_DELIM);
 	}
 	tokens[position] = NULL;
+	*numTokens = position;
 	return tokens;
 }
 
-int lsh_cd( char **args );
-int lsh_help( char **args );
-int lsh_exit( char **args );
+int lsh_cd( int argc, char **argv );
+int lsh_help( int argc, char **argv );
+int lsh_exit( int argc, char **argv );
 
 // List of builtin commands, followed by their corresponding functions
 char *builtin_str[] = {
@@ -152,7 +131,7 @@ char *builtin_str[] = {
 		"exit"
 };
 
-int (*builtin_func[]) (char **) = {
+int (*builtin_func[]) (int, char **) = {
 		&lsh_cd,
 		&lsh_help,
 		&lsh_exit
@@ -164,12 +143,12 @@ int lsh_num_builtins()
 }
 
 // builtin function implementations.
-int lsh_cd( char **args )
+int lsh_cd( int argc, char **argv )
 {
 	return 1;
 }
 
-int lsh_help( char **args )
+int lsh_help( int argc, char **argv )
 {
 	int i;
 	printf("Irka Shell\n");
@@ -184,28 +163,28 @@ int lsh_help( char **args )
 	return 1;
 }
 
-int lsh_exit( char **args )
+int lsh_exit( int argc, char **argv )
 {
 	return 0;
 }
 
-int lsh_execute( char **args )
+int lsh_execute( int argc, char **argv )
 {
 	int i;
 
-	if (args[0] == NULL) {
+	if (argv[0] == NULL) {
 		// an empty command was entered
 		return 1;
 	}
 
 	for (i=0; i < lsh_num_builtins(); i++) {
-		if (strcmp(args[0], builtin_str[i]) == 0) {
-			return (*builtin_func[i])(args);
+		if (strcmp(argv[0], builtin_str[i]) == 0) {
+			return (*builtin_func[i])(argc, argv);
 		}
 	}
 
-	printf("%s: command not found\n", args[0]);
+	printf("%s: command not found\n", argv[0]);
 
-	return /*lsh_launch(args)*/1;
+	return /*lsh_launch(argv)*/1;
 }
 
