@@ -10,7 +10,6 @@
 
 
 
-
-
+void sh_loop(void);
 
 #endif /* SRC_SHELL_H_ */

@@ -91,7 +91,7 @@
 					</folderInfo>
 					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1917443415.1234132802" name="main.c" rcbsApplicability="disable" resourcePath="src/main.c" toolsToInvoke="cdt.managedbuild.tool.gnu.c.compiler.exe.release.13836137.1345946106">
 						<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.13836137.1345946106" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release.13836137">
-							<option id="gnu.c.compiler.option.warnings.nowarn.599581311" superClass="gnu.c.compiler.option.warnings.nowarn" value="true" valueType="boolean"/>
+							<option id="gnu.c.compiler.option.warnings.nowarn.599581311" name="Inhibit all warnings (-w)" superClass="gnu.c.compiler.option.warnings.nowarn" value="true" valueType="boolean"/>
 							<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.716518782" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 						</tool>
 						<tool customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.2079630042" name="Resource Custom Build Step">
@@ -127,4 +127,5 @@
 			<resource resourceType="PROJECT" workspacePath="/shell"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
